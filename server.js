@@ -10,6 +10,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ─────────────────────────────────────────────────────────────
+// Trust Render / Heroku / any reverse-proxy's forwarded headers
+// Without this, req.protocol is always "http" behind HTTPS termination
+// ─────────────────────────────────────────────────────────────
+app.set("trust proxy", 1);
+
+// ─────────────────────────────────────────────────────────────
 // Middleware
 // ─────────────────────────────────────────────────────────────
 app.use(cors());
@@ -146,7 +152,12 @@ app.get("/proxy", async (req, res) => {
   if (isBlocked(targetUrl)) return res.status(403).json({ error: "Domain not allowed." });
 
   totalRequests++;
-  const proxyBase = `${req.protocol}://${req.get("host")}/proxy`;
+  // Always use https on hosted platforms (Render, Heroku, etc.) which do TLS termination.
+  // Without this, req.protocol is "http" behind their HTTPS reverse proxy → Mixed Content errors.
+  const detectedProtocol = req.get("x-forwarded-proto") || req.protocol;
+  const isLocalhost = /^(localhost|127\.|::1)/.test(req.hostname);
+  const finalProtocol = isLocalhost ? detectedProtocol : "https";
+  const proxyBase = `${finalProtocol}://${req.get("host")}/proxy`;
   const isCssUrl = /\.css(\?.*)?$/i.test(new URL(targetUrl).pathname);
 
   try {
@@ -386,7 +397,66 @@ app.get("/api/stats", (_req, res) => {
   });
 });
 
-// SPA fallback
-app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+// ─────────────────────────────────────────────────────────────
+// Smart fallback: intercept JS-loaded assets that don't go through /proxy?url=
+// Uses the Referer header to reconstruct the target origin.
+// ─────────────────────────────────────────────────────────────
+app.get("*", async (req, res) => {
+  const referer = req.get("referer") || "";
+
+  // Extract the origin from the Referer's ?url= param
+  let originUrl = "";
+  try {
+    const refUrl = new URL(referer);
+    const proxiedUrl = refUrl.searchParams.get("url");
+    if (proxiedUrl) {
+      originUrl = new URL(proxiedUrl).origin; // e.g. https://growden.io
+    }
+  } catch {}
+
+  if (originUrl) {
+    const fullTarget = originUrl + req.originalUrl;
+    if (!isBlocked(fullTarget)) {
+      try {
+        const detectedProtocol = req.get("x-forwarded-proto") || req.protocol;
+        const isLocalhost = /^(localhost|127\.|::1)/.test(req.hostname);
+        const finalProtocol = isLocalhost ? detectedProtocol : "https";
+        const proxyBase = `${finalProtocol}://${req.get("host")}/proxy`;
+
+        const response = await axios.get(fullTarget, {
+          timeout: 15000,
+          maxRedirects: 5,
+          responseType: "arraybuffer",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+            "Referer": originUrl + "/",
+            "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate, br",
+          },
+          decompress: true,
+          validateStatus: () => true,
+        });
+
+        const ct = response.headers["content-type"] || "application/octet-stream";
+        STRIP_HEADERS.forEach(h => res.removeHeader(h));
+        res.setHeader("Content-Type", ct);
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Cache-Control", "public, max-age=300");
+
+        if (ct.toLowerCase().includes("text/css")) {
+          return res.status(response.status).send(rewriteCss(response.data.toString("utf-8"), fullTarget, proxyBase));
+        }
+        return res.status(response.status).send(response.data);
+      } catch (err) {
+        console.error(`[Pedus:fallback] ${fullTarget}:`, err.message);
+      }
+    }
+  }
+
+  // True SPA fallback only for HTML routes
+  const ext = path.extname(req.path);
+  if (ext && ext !== ".html") return res.status(404).send("Not found");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 app.listen(PORT, () => console.log(`\n⚡ Pedus Proxy → http://localhost:${PORT}\n`));
