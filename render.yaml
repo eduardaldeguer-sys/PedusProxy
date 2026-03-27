@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: pedus-proxy
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
