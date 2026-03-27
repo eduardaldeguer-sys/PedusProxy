@@ -1,469 +1,695 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pedus Proxy — Browse Freely</title>
-  <meta name="description" content="Pedus Proxy — Fast, free, and open web proxy for everyone." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne+Mono&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <meta name="description" content="Pedus Proxy — Fast, free, open web proxy for everyone."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
   <style>
+    /* ─── Reset & Tokens ──────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #07070d;
-      --surface:   #0e0e1a;
-      --border:    rgba(0, 255, 180, 0.18);
-      --accent:    #00ffb4;
-      --accent2:   #00c8ff;
-      --text:      #d4d4e8;
-      --text-dim:  #6b6b8a;
-      --danger:    #ff4e6a;
-      --glow:      rgba(0, 255, 180, 0.15);
+      --c-bg:        #04040a;
+      --c-surf:      #0b0b14;
+      --c-surf2:     #10101c;
+      --c-border:    rgba(255,255,255,0.07);
+      --c-border-hi: rgba(0,255,180,0.22);
+      --c-green:     #00ffb4;
+      --c-blue:      #3b82f6;
+      --c-purple:    #8b5cf6;
+      --c-pink:      #f472b6;
+      --c-orange:    #fb923c;
+      --c-text:      #c8c8d8;
+      --c-muted:     #505068;
+      --c-white:     #f0f0f8;
+      --r-sm: 10px;
+      --r-md: 16px;
+      --r-lg: 24px;
     }
 
-    html, body {
-      min-height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: 'Space Grotesk', sans-serif;
       overflow-x: hidden;
+      cursor: default;
     }
 
-    /* ── Grid Background ── */
-    body::before {
+    /* ─── Noise texture overlay ───────────────────────────────────────────── */
+    body::after {
       content: '';
-      position: fixed; inset: 0; z-index: 0;
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+
+    /* ─── Grid ────────────────────────────────────────────────────────────── */
+    .grid-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background-image:
-        linear-gradient(rgba(0,255,180,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,180,0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 100%);
-      pointer-events: none;
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 60px 60px;
     }
 
-    /* ── Glow orbs ── */
-    .orb {
-      position: fixed; border-radius: 50%; filter: blur(100px);
-      pointer-events: none; z-index: 0; opacity: 0.35;
+    /* ─── Gradient blobs ──────────────────────────────────────────────────── */
+    .blob {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+      will-change: transform;
     }
-    .orb-1 { width: 600px; height: 600px; top: -200px; left: -150px;
-              background: radial-gradient(circle, #00ffb420, transparent 70%); }
-    .orb-2 { width: 500px; height: 500px; bottom: -100px; right: -100px;
-              background: radial-gradient(circle, #00c8ff15, transparent 70%); }
+    .blob-1 {
+      width: 800px; height: 800px; top: -300px; left: -200px;
+      background: radial-gradient(circle at center, rgba(0,255,180,0.07) 0%, transparent 65%);
+      animation: floatA 18s ease-in-out infinite;
+    }
+    .blob-2 {
+      width: 700px; height: 700px; bottom: -200px; right: -150px;
+      background: radial-gradient(circle at center, rgba(139,92,246,0.06) 0%, transparent 65%);
+      animation: floatB 22s ease-in-out infinite;
+    }
+    .blob-3 {
+      width: 500px; height: 500px; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      background: radial-gradient(circle at center, rgba(59,130,246,0.04) 0%, transparent 65%);
+      animation: floatC 14s ease-in-out infinite;
+    }
+    @keyframes floatA { 0%,100%{transform:translate(0,0)scale(1)} 50%{transform:translate(60px,40px)scale(1.08)} }
+    @keyframes floatB { 0%,100%{transform:translate(0,0)scale(1)} 50%{transform:translate(-40px,-60px)scale(1.05)} }
+    @keyframes floatC { 0%,100%{transform:translate(-50%,-50%)scale(1)} 50%{transform:translate(-50%,-50%)scale(1.12)} }
 
-    /* ── Layout ── */
+    /* ─── Page shell ──────────────────────────────────────────────────────── */
     .page {
       position: relative; z-index: 1;
       min-height: 100vh;
       display: flex; flex-direction: column; align-items: center;
-      padding: 0 20px 80px;
+      padding: 0 20px 100px;
     }
 
-    /* ── Nav ── */
+    /* ─── Nav ─────────────────────────────────────────────────────────────── */
     nav {
-      width: 100%; max-width: 900px;
+      width: 100%; max-width: 960px;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 28px 0 0;
+      padding: 32px 0 0;
     }
-    .nav-logo {
-      font-family: 'Syne Mono', monospace;
-      font-size: 20px; letter-spacing: 3px; color: var(--accent);
-      text-decoration: none; display: flex; align-items: center; gap: 10px;
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 16px; font-weight: 700; letter-spacing: 2px;
+      color: var(--c-green); text-decoration: none;
     }
-    .nav-logo .dot {
-      width: 8px; height: 8px; background: var(--accent);
-      border-radius: 50%; display: inline-block;
-      box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-      animation: pulse 2s ease-in-out infinite;
+    .nav-brand .pulse {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--c-green);
+      box-shadow: 0 0 0 0 rgba(0,255,180,0.5);
+      animation: ping 2s cubic-bezier(0,0,0.2,1) infinite;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.85); }
+    @keyframes ping {
+      0%  { box-shadow: 0 0 0 0 rgba(0,255,180,0.6); }
+      70% { box-shadow: 0 0 0 8px rgba(0,255,180,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(0,255,180,0); }
     }
-    .nav-tag {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px; color: var(--text-dim); letter-spacing: 1px;
-      border: 1px solid var(--border); border-radius: 20px;
-      padding: 4px 12px;
+    .nav-badges {
+      display: flex; gap: 8px;
     }
-
-    /* ── Hero ── */
-    .hero {
-      width: 100%; max-width: 780px;
-      text-align: center;
-      padding: 80px 0 56px;
-      animation: fadeUp 0.7s ease both;
+    .badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 20px;
+      border: 1px solid var(--c-border);
+      color: var(--c-muted); background: rgba(255,255,255,0.03);
     }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(28px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .hero-eyebrow {
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      letter-spacing: 3px; color: var(--accent); text-transform: uppercase;
-      margin-bottom: 24px; display: flex; align-items: center;
-      justify-content: center; gap: 12px;
-    }
-    .hero-eyebrow::before, .hero-eyebrow::after {
-      content: ''; flex: 1; max-width: 60px;
-      height: 1px; background: var(--accent); opacity: 0.4;
-    }
-    h1 {
-      font-family: 'Syne', sans-serif; font-weight: 800;
-      font-size: clamp(52px, 9vw, 96px); line-height: 0.95;
-      letter-spacing: -2px; color: #fff;
-      margin-bottom: 28px;
-    }
-    h1 .accent { color: var(--accent); position: relative; }
-    h1 .accent::after {
-      content: '';
-      position: absolute; left: 0; right: 0; bottom: 2px; height: 3px;
-      background: var(--accent);
-      box-shadow: 0 0 16px var(--accent);
-      border-radius: 2px;
-    }
-    .hero-sub {
-      font-family: 'DM Mono', monospace; font-size: 15px;
-      color: var(--text-dim); line-height: 1.7; max-width: 500px; margin: 0 auto 48px;
-    }
-
-    /* ── Proxy Input Card ── */
-    .proxy-card {
-      width: 100%; max-width: 720px;
-      background: linear-gradient(135deg, rgba(14,14,26,0.95) 0%, rgba(10,10,20,0.95) 100%);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 36px 36px 28px;
-      box-shadow: 0 0 0 1px rgba(0,255,180,0.04),
-                  0 8px 60px rgba(0,0,0,0.6),
-                  0 0 80px var(--glow);
-      animation: fadeUp 0.7s 0.15s ease both;
-      backdrop-filter: blur(12px);
-    }
-
-    .input-label {
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase;
-      margin-bottom: 12px; display: block;
-    }
-
-    .url-row {
-      display: flex; gap: 10px; align-items: stretch;
-    }
-
-    .url-input-wrap {
-      flex: 1; position: relative;
-    }
-    .url-prefix {
-      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
-      font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text-dim);
-      pointer-events: none; user-select: none;
-    }
-    #url-input {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1.5px solid rgba(0,255,180,0.2);
-      border-radius: 12px;
-      padding: 16px 16px 16px 16px;
-      font-family: 'DM Mono', monospace; font-size: 15px;
-      color: #fff; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-      caret-color: var(--accent);
-    }
-    #url-input::placeholder { color: var(--text-dim); }
-    #url-input:focus {
-      border-color: var(--accent);
-      background: rgba(0,255,180,0.04);
-      box-shadow: 0 0 0 3px rgba(0,255,180,0.10), 0 0 30px rgba(0,255,180,0.08);
-    }
-
-    #go-btn {
-      background: var(--accent);
-      color: #07070d;
-      border: none; border-radius: 12px;
-      padding: 0 32px;
-      font-family: 'Syne', sans-serif; font-weight: 800;
-      font-size: 15px; letter-spacing: 1px; cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-      white-space: nowrap;
-      box-shadow: 0 0 20px rgba(0,255,180,0.3);
-      position: relative; overflow: hidden;
-    }
-    #go-btn::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-    }
-    #go-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 30px rgba(0,255,180,0.5);
-    }
-    #go-btn:active { transform: translateY(0); }
-    #go-btn.loading { opacity: 0.6; pointer-events: none; }
-
-    .quick-links {
-      margin-top: 20px;
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    }
-    .quick-label {
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      color: var(--text-dim); letter-spacing: 1px; margin-right: 4px;
-    }
-    .quick-btn {
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      color: var(--text-dim); background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
-      padding: 5px 10px; cursor: pointer; text-decoration: none;
-      transition: color 0.2s, border-color 0.2s, background 0.2s;
-    }
-    .quick-btn:hover {
-      color: var(--accent); border-color: var(--accent);
+    .badge.live {
+      color: var(--c-green); border-color: rgba(0,255,180,0.25);
       background: rgba(0,255,180,0.06);
     }
 
-    /* ── Error banner ── */
-    #error-banner {
-      display: none; margin-top: 16px;
-      background: rgba(255,78,106,0.1); border: 1px solid rgba(255,78,106,0.3);
-      border-radius: 10px; padding: 12px 16px;
-      font-family: 'DM Mono', monospace; font-size: 13px; color: #ff8096;
-      animation: fadeUp 0.3s ease;
+    /* ─── Hero ────────────────────────────────────────────────────────────── */
+    .hero {
+      width: 100%; max-width: 860px;
+      text-align: center;
+      padding: 80px 0 60px;
     }
 
-    /* ── Features ── */
-    .features {
-      width: 100%; max-width: 720px;
-      margin-top: 48px;
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-      animation: fadeUp 0.7s 0.3s ease both;
+    .hero-kicker {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      letter-spacing: 3px; text-transform: uppercase; color: var(--c-muted);
+      margin-bottom: 32px;
+      opacity: 0; animation: riseIn 0.6s 0.1s ease forwards;
     }
-    @media (max-width: 600px) { .features { grid-template-columns: 1fr; } }
+    .hero-kicker span { color: var(--c-green); }
 
-    .feat {
-      background: rgba(14,14,26,0.7);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 16px; padding: 24px 20px;
+    h1 {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: clamp(56px, 9vw, 104px); line-height: 0.92;
+      letter-spacing: -3px; color: var(--c-white);
+      margin-bottom: 32px;
+      opacity: 0; animation: riseIn 0.7s 0.2s ease forwards;
+    }
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--c-green) 0%, #00d4ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 17px; color: var(--c-muted); line-height: 1.75;
+      max-width: 480px; margin: 0 auto 52px;
+      opacity: 0; animation: riseIn 0.7s 0.3s ease forwards;
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Proxy Card ──────────────────────────────────────────────────────── */
+    .proxy-card {
+      width: 100%; max-width: 760px;
+      background: var(--c-surf);
+      border: 1px solid var(--c-border-hi);
+      border-radius: var(--r-lg);
+      padding: 36px;
+      box-shadow:
+        0 0 0 1px rgba(0,255,180,0.05),
+        0 20px 80px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      opacity: 0; animation: riseIn 0.7s 0.4s ease forwards;
+      position: relative; overflow: hidden;
+    }
+    .proxy-card::before {
+      content: '';
+      position: absolute; top: 0; left: 20%; right: 20%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,180,0.5), transparent);
+    }
+
+    .card-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+    }
+    .card-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .card-dot.r { background: #ff5f57; }
+    .card-dot.y { background: #febc2e; }
+    .card-dot.g { background: #28c840; }
+    .card-title {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--c-muted); letter-spacing: 2px; text-transform: uppercase;
+      margin-left: 8px;
+    }
+
+    .input-group {
+      display: flex; gap: 10px; align-items: stretch;
+      background: var(--c-surf2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--r-md);
+      padding: 6px;
       transition: border-color 0.25s, box-shadow 0.25s;
     }
-    .feat:hover {
-      border-color: rgba(0,255,180,0.25);
-      box-shadow: 0 0 30px rgba(0,255,180,0.07);
-    }
-    .feat-icon {
-      font-size: 24px; margin-bottom: 14px; display: block;
-      filter: grayscale(0.3);
-    }
-    .feat-title {
-      font-family: 'Syne', sans-serif; font-weight: 700;
-      font-size: 15px; color: #fff; margin-bottom: 8px;
-    }
-    .feat-desc {
-      font-family: 'DM Mono', monospace; font-size: 12px;
-      color: var(--text-dim); line-height: 1.65;
+    .input-group:focus-within {
+      border-color: rgba(0,255,180,0.35);
+      box-shadow: 0 0 0 3px rgba(0,255,180,0.08), 0 0 40px rgba(0,255,180,0.05);
     }
 
-    /* ── Stats bar ── */
-    .stats-bar {
-      width: 100%; max-width: 720px; margin-top: 20px;
-      display: flex; gap: 0; justify-content: center;
-      border: 1px solid var(--border); border-radius: 14px;
-      overflow: hidden; animation: fadeUp 0.7s 0.45s ease both;
+    .url-icon {
+      display: flex; align-items: center; padding: 0 4px 0 10px;
+      color: var(--c-muted); font-size: 16px; user-select: none; flex-shrink: 0;
     }
-    .stat-item {
-      flex: 1; padding: 18px 0; text-align: center;
-      border-right: 1px solid var(--border);
-      background: rgba(14,14,26,0.6);
-      transition: background 0.2s;
+
+    #url-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-family: 'Space Mono', monospace; font-size: 14px;
+      color: var(--c-white); caret-color: var(--c-green);
+      min-width: 0; padding: 10px 6px;
     }
-    .stat-item:last-child { border-right: none; }
-    .stat-item:hover { background: rgba(0,255,180,0.04); }
+    #url-input::placeholder { color: var(--c-muted); }
+
+    #go-btn {
+      background: var(--c-green); color: #04040a;
+      border: none; border-radius: 10px;
+      padding: 12px 28px;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 14px; letter-spacing: 0.5px; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      white-space: nowrap; flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(0,255,180,0.25);
+      display: flex; align-items: center; gap: 8px;
+    }
+    #go-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 32px rgba(0,255,180,0.4); }
+    #go-btn:active { transform: translateY(0); }
+    #go-btn.loading { opacity: 0.55; pointer-events: none; }
+    #go-btn .arrow { transition: transform 0.2s; }
+    #go-btn:hover .arrow { transform: translateX(3px); }
+
+    /* ─── Quick access ────────────────────────────────────────────────────── */
+    .quick-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin-top: 18px;
+    }
+    .quick-label {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--c-muted);
+    }
+    .quick-chip {
+      font-family: 'Space Mono', monospace; font-size: 11px; color: var(--c-muted);
+      background: rgba(255,255,255,0.04); border: 1px solid var(--c-border);
+      border-radius: 6px; padding: 5px 12px; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .quick-chip:hover {
+      color: var(--c-green); border-color: rgba(0,255,180,0.3);
+      background: rgba(0,255,180,0.05); transform: translateY(-1px);
+    }
+    .quick-chip .favicon { font-size: 12px; }
+
+    /* ─── Error ───────────────────────────────────────────────────────────── */
+    #error-box {
+      display: none; margin-top: 14px;
+      background: rgba(251,70,70,0.08); border: 1px solid rgba(251,70,70,0.25);
+      border-radius: 10px; padding: 12px 16px;
+      font-family: 'Space Mono', monospace; font-size: 12px; color: #f87171;
+    }
+
+    /* ─── Stats ───────────────────────────────────────────────────────────── */
+    .stats-row {
+      display: flex; gap: 12px; width: 100%; max-width: 760px;
+      margin-top: 14px;
+      opacity: 0; animation: riseIn 0.7s 0.5s ease forwards;
+    }
+    .stat-card {
+      flex: 1; background: var(--c-surf);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md); padding: 18px 20px;
+      display: flex; align-items: center; gap: 14px;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: default;
+    }
+    .stat-card:hover {
+      border-color: rgba(0,255,180,0.15); background: var(--c-surf2);
+    }
+    .stat-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .stat-icon.green { background: rgba(0,255,180,0.1); }
+    .stat-icon.blue  { background: rgba(59,130,246,0.1); }
+    .stat-icon.purple{ background: rgba(139,92,246,0.1); }
+    .stat-text {}
     .stat-val {
-      font-family: 'Syne Mono', monospace; font-size: 22px;
-      color: var(--accent); display: block; margin-bottom: 4px;
-      letter-spacing: -1px;
+      font-family: 'Space Mono', monospace; font-size: 20px;
+      color: var(--c-white); letter-spacing: -1px; display: block;
     }
     .stat-lbl {
-      font-family: 'DM Mono', monospace; font-size: 10px;
-      color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase;
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--c-muted); letter-spacing: 1.5px; text-transform: uppercase;
     }
 
-    /* ── Footer ── */
+    /* ─── Features ────────────────────────────────────────────────────────── */
+    .features {
+      width: 100%; max-width: 960px;
+      margin-top: 80px;
+      opacity: 0; animation: riseIn 0.7s 0.6s ease forwards;
+    }
+    .section-label {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 4px; text-transform: uppercase; color: var(--c-muted);
+      text-align: center; margin-bottom: 40px;
+    }
+    .feat-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
+    }
+    @media(max-width:680px){.feat-grid{grid-template-columns:1fr;}.stats-row{flex-direction:column;}}
+
+    .feat-card {
+      background: var(--c-surf); border: 1px solid var(--c-border);
+      border-radius: var(--r-lg); padding: 28px 24px;
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+      position: relative; overflow: hidden;
+    }
+    .feat-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at top left, rgba(0,255,180,0.04), transparent 60%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .feat-card:hover {
+      border-color: rgba(0,255,180,0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .feat-card:hover::before { opacity: 1; }
+
+    .feat-num {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--c-muted); letter-spacing: 2px; margin-bottom: 16px; display: block;
+    }
+    .feat-icon-wrap {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 16px;
+    }
+    .feat-title {
+      font-size: 16px; font-weight: 600; color: var(--c-white);
+      margin-bottom: 10px; letter-spacing: -0.3px;
+    }
+    .feat-desc {
+      font-size: 13px; color: var(--c-muted); line-height: 1.7;
+    }
+
+    /* Feature icon backgrounds */
+    .ic-green  { background: rgba(0,255,180,0.1); }
+    .ic-blue   { background: rgba(59,130,246,0.1); }
+    .ic-purple { background: rgba(139,92,246,0.1); }
+    .ic-orange { background: rgba(251,146,60,0.1); }
+    .ic-pink   { background: rgba(244,114,182,0.1); }
+    .ic-teal   { background: rgba(20,184,166,0.1); }
+
+    /* ─── How it works ────────────────────────────────────────────────────── */
+    .how {
+      width: 100%; max-width: 760px;
+      margin-top: 80px;
+      opacity: 0; animation: riseIn 0.7s 0.7s ease forwards;
+    }
+    .how-steps {
+      display: flex; align-items: flex-start; gap: 0;
+      position: relative;
+    }
+    .how-steps::before {
+      content: '';
+      position: absolute; top: 22px; left: 22px; right: 22px; height: 1px;
+      background: linear-gradient(90deg,
+        transparent, rgba(0,255,180,0.15) 20%, rgba(0,255,180,0.15) 80%, transparent);
+    }
+    .how-step {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 14px; padding: 0 12px; position: relative;
+    }
+    .how-num {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--c-surf2); border: 1px solid var(--c-border-hi);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700;
+      color: var(--c-green); z-index: 1;
+      box-shadow: 0 0 20px rgba(0,255,180,0.12);
+    }
+    .how-text {
+      font-size: 13px; color: var(--c-muted); line-height: 1.6;
+    }
+    .how-text strong { color: var(--c-text); display: block; margin-bottom: 4px; }
+
+    /* ─── Footer ──────────────────────────────────────────────────────────── */
     footer {
       position: relative; z-index: 1;
-      margin-top: 60px; padding: 20px;
-      text-align: center;
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      color: var(--text-dim); letter-spacing: 1px;
+      width: 100%; max-width: 960px;
+      margin-top: 80px; padding: 28px 0;
+      border-top: 1px solid var(--c-border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
     }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+    .footer-brand {
+      font-family: 'Space Mono', monospace; font-size: 12px;
+      color: var(--c-muted); letter-spacing: 1px;
+    }
+    .footer-brand strong { color: var(--c-green); }
+    .footer-links {
+      display: flex; gap: 20px;
+    }
+    .footer-links a {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--c-muted); text-decoration: none; letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--c-green); }
 
-    /* ── Spinner ── */
-    .spinner {
-      display: inline-block; width: 16px; height: 16px;
-      border: 2px solid rgba(7,7,13,0.4); border-top-color: #07070d;
-      border-radius: 50%; animation: spin 0.6s linear infinite;
-      vertical-align: middle; margin-right: 6px;
+    /* ─── Spinner ─────────────────────────────────────────────────────────── */
+    .spin {
+      width: 14px; height: 14px; border: 2px solid rgba(4,4,10,0.4);
+      border-top-color: #04040a; border-radius: 50%;
+      animation: rot 0.6s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes rot { to { transform: rotate(360deg); } }
 
-    /* ── Scan line effect ── */
-    .scanlines {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background: repeating-linear-gradient(
-        0deg, transparent, transparent 2px,
-        rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
-      );
-    }
+    /* ─── Custom scrollbar ────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--c-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--c-surf2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #202030; }
   </style>
 </head>
 <body>
+  <div class="grid-bg"></div>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
 
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-<div class="scanlines"></div>
+  <div class="page">
+    <!-- ── Nav ─────────────────────────────────────────────────────────── -->
+    <nav>
+      <a class="nav-brand" href="/">
+        <span class="pulse"></span>
+        PEDUS PROXY
+      </a>
+      <div class="nav-badges">
+        <span class="badge live">● Live</span>
+        <span class="badge">Free</span>
+        <span class="badge">Open</span>
+      </div>
+    </nav>
 
-<div class="page">
-  <nav>
-    <a class="nav-logo" href="/">
-      <span class="dot"></span> PEDUS PROXY
-    </a>
-    <span class="nav-tag">v1.0 · open access</span>
-  </nav>
+    <!-- ── Hero ────────────────────────────────────────────────────────── -->
+    <section class="hero">
+      <div class="hero-kicker">
+        <span>⚡</span> Web Proxy &mdash; No installs, no sign-up
+      </div>
 
-  <section class="hero">
-    <div class="hero-eyebrow">Free · Fast · Private</div>
-    <h1>Browse<br>The <span class="accent">Web</span><br>Freely.</h1>
-    <p class="hero-sub">
-      Enter any URL below and Pedus will fetch it for you — no installs, no sign-up, just paste and go.
-    </p>
+      <h1>Browse the<br>web <em>freely.</em></h1>
 
-    <div class="proxy-card">
-      <label class="input-label" for="url-input">// Target URL</label>
-      <div class="url-row">
-        <div class="url-input-wrap">
+      <p class="hero-sub">
+        Paste any URL, hit Go. Pedus fetches it through our server,
+        rewriting every link and resource so everything loads — fast.
+      </p>
+
+      <!-- Input card -->
+      <div class="proxy-card">
+        <div class="card-header">
+          <span class="card-dot r"></span>
+          <span class="card-dot y"></span>
+          <span class="card-dot g"></span>
+          <span class="card-title">// pedus proxy console</span>
+        </div>
+
+        <div class="input-group">
+          <span class="url-icon">🔗</span>
           <input
             id="url-input"
             type="text"
-            placeholder="example.com or https://example.com"
+            placeholder="Enter any URL — e.g. wikipedia.org"
             autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
           />
+          <button id="go-btn" onclick="navigate()">
+            <span id="btn-text">Browse</span>
+            <span class="arrow" id="btn-arrow">→</span>
+          </button>
         </div>
-        <button id="go-btn" onclick="navigate()">GO →</button>
+
+        <div class="quick-row">
+          <span class="quick-label">Try:</span>
+          <a class="quick-chip" href="#" onclick="tryUrl('https://news.ycombinator.com');return false;">
+            <span class="favicon">🟠</span> Hacker News
+          </a>
+          <a class="quick-chip" href="#" onclick="tryUrl('https://en.wikipedia.org');return false;">
+            <span class="favicon">📖</span> Wikipedia
+          </a>
+          <a class="quick-chip" href="#" onclick="tryUrl('https://example.com');return false;">
+            <span class="favicon">🌐</span> example.com
+          </a>
+          <a class="quick-chip" href="#" onclick="tryUrl('https://httpbin.org/get');return false;">
+            <span class="favicon">🔧</span> httpbin
+          </a>
+        </div>
+
+        <div id="error-box"></div>
       </div>
 
-      <div class="quick-links">
-        <span class="quick-label">Try:</span>
-        <a class="quick-btn" href="#" onclick="tryUrl('https://example.com');return false;">example.com</a>
-        <a class="quick-btn" href="#" onclick="tryUrl('https://news.ycombinator.com');return false;">hacker news</a>
-        <a class="quick-btn" href="#" onclick="tryUrl('https://en.wikipedia.org');return false;">wikipedia</a>
-        <a class="quick-btn" href="#" onclick="tryUrl('https://httpbin.org/get');return false;">httpbin</a>
+      <!-- Live stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon green">⚡</div>
+          <div class="stat-text">
+            <span class="stat-val" id="s-req">—</span>
+            <span class="stat-lbl">Requests proxied</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">🕐</div>
+          <div class="stat-text">
+            <span class="stat-val" id="s-up">—</span>
+            <span class="stat-lbl">Uptime (mins)</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon purple">💾</div>
+          <div class="stat-text">
+            <span class="stat-val" id="s-mem">—</span>
+            <span class="stat-lbl">Memory (MB)</span>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div id="error-banner"></div>
+    <!-- ── Features ─────────────────────────────────────────────────────── -->
+    <div class="features">
+      <p class="section-label">Why Pedus</p>
+      <div class="feat-grid">
+        <div class="feat-card">
+          <span class="feat-num">01</span>
+          <div class="feat-icon-wrap ic-green">⚡</div>
+          <div class="feat-title">Blazing Fast</div>
+          <div class="feat-desc">Optimized request pipeline with Gzip/Brotli decompression, smart redirect handling and 20s timeout.</div>
+        </div>
+        <div class="feat-card">
+          <span class="feat-num">02</span>
+          <div class="feat-icon-wrap ic-blue">🎨</div>
+          <div class="feat-title">Full Style Support</div>
+          <div class="feat-desc">CSS <code>url()</code>, <code>@import</code>, inline styles, srcsets and lazy-loaded images all get rewritten correctly.</div>
+        </div>
+        <div class="feat-card">
+          <span class="feat-num">03</span>
+          <div class="feat-icon-wrap ic-purple">🔒</div>
+          <div class="feat-title">No Tracking</div>
+          <div class="feat-desc">Zero logs of your browsing activity. No cookies passed back, no analytics, no fingerprinting.</div>
+        </div>
+        <div class="feat-card">
+          <span class="feat-num">04</span>
+          <div class="feat-icon-wrap ic-orange">🌍</div>
+          <div class="feat-title">Open Access</div>
+          <div class="feat-desc">No login, no subscription. Paste, browse, done. Available to everyone on the planet.</div>
+        </div>
+        <div class="feat-card">
+          <span class="feat-num">05</span>
+          <div class="feat-icon-wrap ic-pink">🛡</div>
+          <div class="feat-title">CSP Stripped</div>
+          <div class="feat-desc">All Content-Security-Policy and X-Frame-Options headers are removed so pages render without restriction.</div>
+        </div>
+        <div class="feat-card">
+          <span class="feat-num">06</span>
+          <div class="feat-icon-wrap ic-teal">📡</div>
+          <div class="feat-title">Rate Protected</div>
+          <div class="feat-desc">Built-in rate limiting keeps the service stable and fair for every user without token walls.</div>
+        </div>
+      </div>
     </div>
-  </section>
 
-  <div class="stats-bar">
-    <div class="stat-item">
-      <span class="stat-val" id="stat-requests">—</span>
-      <span class="stat-lbl">Requests served</span>
+    <!-- ── How it works ──────────────────────────────────────────────────── -->
+    <div class="how">
+      <p class="section-label" style="margin-bottom:40px;">How it works</p>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-num">01</div>
+          <div class="how-text"><strong>Paste URL</strong>Type or paste the address you want to visit.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">02</div>
+          <div class="how-text"><strong>Pedus Fetches</strong>Our server requests the page on your behalf.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">03</div>
+          <div class="how-text"><strong>URLs Rewritten</strong>Every link, image and stylesheet is proxified.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">04</div>
+          <div class="how-text"><strong>Full Page</strong>You get the complete, styled, working page.</div>
+        </div>
+      </div>
     </div>
-    <div class="stat-item">
-      <span class="stat-val" id="stat-uptime">—</span>
-      <span class="stat-lbl">Uptime (min)</span>
-    </div>
-    <div class="stat-item">
-      <span class="stat-val">100%</span>
-      <span class="stat-lbl">Free forever</span>
-    </div>
-  </div>
 
-  <div class="features">
-    <div class="feat">
-      <span class="feat-icon">⚡</span>
-      <div class="feat-title">Fast & Reliable</div>
-      <div class="feat-desc">Optimized request pipeline with automatic retries and smart redirect handling.</div>
-    </div>
-    <div class="feat">
-      <span class="feat-icon">🔒</span>
-      <div class="feat-title">No Logs</div>
-      <div class="feat-desc">We don't store your browsing history or personal data. Your traffic stays private.</div>
-    </div>
-    <div class="feat">
-      <span class="feat-icon">🌍</span>
-      <div class="feat-title">Open Access</div>
-      <div class="feat-desc">Available to everyone, everywhere. No registration, no limits, no paywalls.</div>
-    </div>
-  </div>
-</div>
+    <!-- ── Footer ───────────────────────────────────────────────────────── -->
+    <footer>
+      <div class="footer-brand">
+        Built with ♥ — <strong>PEDUS PROXY</strong> v1.0
+      </div>
+      <div class="footer-links">
+        <a href="https://render.com" target="_blank" rel="noopener">Hosted on Render</a>
+        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </footer>
+  </div><!-- /page -->
 
-<footer>
-  Built with ♥ by <a href="#">Pedus</a> · Hosted on <a href="https://render.com" target="_blank">Render</a>
-</footer>
+  <script>
+    // ── Navigation ────────────────────────────────────────────────────────
+    function navigate() {
+      const input = document.getElementById('url-input');
+      const errBox = document.getElementById('error-box');
+      const btn = document.getElementById('go-btn');
+      let val = input.value.trim();
 
-<script>
-  // ── Navigate ──────────────────────────────────────────────────────────────
-  function navigate() {
-    const input = document.getElementById('url-input');
-    const errBanner = document.getElementById('error-banner');
-    const btn = document.getElementById('go-btn');
-    let val = input.value.trim();
+      errBox.style.display = 'none';
+      if (!val) { showErr('Please enter a URL first.'); input.focus(); return; }
+      if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
 
-    errBanner.style.display = 'none';
+      try { new URL(val); }
+      catch { showErr('That doesn\'t look like a valid URL. Try: example.com'); return; }
 
-    if (!val) {
-      showError('Please enter a URL first.');
-      input.focus(); return;
+      btn.innerHTML = '<div class="spin"></div><span>Loading…</span>';
+      btn.classList.add('loading');
+      window.location.href = '/proxy?url=' + encodeURIComponent(val);
     }
 
-    // Auto-prefix
-    if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
-
-    try { new URL(val); } catch {
-      showError('That doesn\'t look like a valid URL. Try: example.com');
-      return;
+    function showErr(msg) {
+      const b = document.getElementById('error-box');
+      b.textContent = '⚠  ' + msg;
+      b.style.display = 'block';
     }
 
-    btn.innerHTML = '<span class="spinner"></span>Loading...';
-    btn.classList.add('loading');
-    window.location.href = '/proxy?url=' + encodeURIComponent(val);
-  }
+    function tryUrl(u) {
+      document.getElementById('url-input').value = u;
+      navigate();
+    }
 
-  function showError(msg) {
-    const b = document.getElementById('error-banner');
-    b.textContent = '⚠ ' + msg;
-    b.style.display = 'block';
-  }
+    // ── Keyboard ──────────────────────────────────────────────────────────
+    document.getElementById('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') navigate();
+      document.getElementById('error-box').style.display = 'none';
+    });
 
-  function tryUrl(u) {
-    document.getElementById('url-input').value = u;
-    navigate();
-  }
+    // ── Autofocus ─────────────────────────────────────────────────────────
+    window.addEventListener('load', () => document.getElementById('url-input').focus());
 
-  // ── Keyboard ─────────────────────────────────────────────────────────────
-  document.getElementById('url-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') navigate();
-    document.getElementById('error-banner').style.display = 'none';
-  });
+    // ── Stats ─────────────────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const d = await (await fetch('/api/stats')).json();
+        document.getElementById('s-req').textContent = d.requests.toLocaleString();
+        document.getElementById('s-up').textContent  = Math.floor(d.uptime / 60).toLocaleString();
+        document.getElementById('s-mem').textContent = d.memory + ' MB';
+      } catch {}
+    }
+    loadStats();
+    setInterval(loadStats, 8000);
 
-  // ── Focus on load ─────────────────────────────────────────────────────────
-  window.addEventListener('load', () => {
-    document.getElementById('url-input').focus();
-  });
-
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  async function loadStats() {
-    try {
-      const r = await fetch('/api/stats');
-      const d = await r.json();
-      document.getElementById('stat-requests').textContent = d.requests.toLocaleString();
-      document.getElementById('stat-uptime').textContent = Math.floor(d.uptime / 60);
-    } catch {}
-  }
-  loadStats();
-  setInterval(loadStats, 10000);
-</script>
+    // ── Mouse trail glow ──────────────────────────────────────────────────
+    let glow = null;
+    document.addEventListener('mousemove', e => {
+      if (!glow) {
+        glow = document.createElement('div');
+        Object.assign(glow.style, {
+          position:'fixed', pointerEvents:'none', zIndex:'0',
+          width:'300px', height:'300px', borderRadius:'50%',
+          background:'radial-gradient(circle, rgba(0,255,180,0.04) 0%, transparent 70%)',
+          transform:'translate(-50%,-50%)', transition:'left 0.8s ease, top 0.8s ease',
+        });
+        document.body.appendChild(glow);
+      }
+      glow.style.left = e.clientX + 'px';
+      glow.style.top  = e.clientY + 'px';
+    });
+  </script>
 </body>
 </html>
