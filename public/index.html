@@ -472,8 +472,8 @@
       <h1>Browse the<br>web <em>freely.</em></h1>
 
       <p class="hero-sub">
-        Paste any URL, hit Go. Pedus fetches it through our server,
-        rewriting every link and resource so everything loads — fast.
+        Type a URL to browse it, or a search query to use PedusSearch.
+        No installs, no sign-up — just paste and go.
       </p>
 
       <!-- Input card -->
@@ -490,7 +490,7 @@
           <input
             id="url-input"
             type="text"
-            placeholder="Enter any URL — e.g. wikipedia.org"
+            placeholder="URL or search query — e.g. best proxy 2024"
             autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
           />
           <button id="go-btn" onclick="navigate()">
@@ -501,17 +501,17 @@
 
         <div class="quick-row">
           <span class="quick-label">Try:</span>
+          <a class="quick-chip" href="/search?q=latest+tech+news" >
+            <span class="favicon">🔍</span> latest tech news
+          </a>
           <a class="quick-chip" href="#" onclick="tryUrl('https://news.ycombinator.com');return false;">
             <span class="favicon">🟠</span> Hacker News
           </a>
           <a class="quick-chip" href="#" onclick="tryUrl('https://en.wikipedia.org');return false;">
             <span class="favicon">📖</span> Wikipedia
           </a>
-          <a class="quick-chip" href="#" onclick="tryUrl('https://example.com');return false;">
-            <span class="favicon">🌐</span> example.com
-          </a>
-          <a class="quick-chip" href="#" onclick="tryUrl('https://httpbin.org/get');return false;">
-            <span class="favicon">🔧</span> httpbin
+          <a class="quick-chip" href="/search?q=free+proxy+sites">
+            <span class="favicon">🌐</span> free proxy sites
           </a>
         </div>
 
@@ -623,7 +623,14 @@
   </div><!-- /page -->
 
   <script>
-    // ── Navigation ────────────────────────────────────────────────────────
+    // ── Smart navigation: URL or search query ─────────────────────────────
+    function isLikelyUrl(val) {
+      if (/^https?:\/\//i.test(val)) return true;
+      // Has a dot and no spaces → treat as URL (e.g. "google.com", "en.wikipedia.org/wiki/X")
+      if (!val.includes(' ') && val.includes('.')) return true;
+      return false;
+    }
+
     function navigate() {
       const input = document.getElementById('url-input');
       const errBox = document.getElementById('error-box');
@@ -631,15 +638,19 @@
       let val = input.value.trim();
 
       errBox.style.display = 'none';
-      if (!val) { showErr('Please enter a URL first.'); input.focus(); return; }
-      if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
-
-      try { new URL(val); }
-      catch { showErr('That doesn\'t look like a valid URL. Try: example.com'); return; }
+      if (!val) { showErr('Type a URL or a search query.'); input.focus(); return; }
 
       btn.innerHTML = '<div class="spin"></div><span>Loading…</span>';
       btn.classList.add('loading');
-      window.location.href = '/proxy?url=' + encodeURIComponent(val);
+
+      if (isLikelyUrl(val)) {
+        // It looks like a URL — proxy it
+        if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
+        window.location.href = '/proxy?url=' + encodeURIComponent(val);
+      } else {
+        // It's a search query — send to PedusSearch (Google proxied)
+        window.location.href = '/search?q=' + encodeURIComponent(val);
+      }
     }
 
     function showErr(msg) {
