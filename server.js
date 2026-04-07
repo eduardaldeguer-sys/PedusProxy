@@ -335,8 +335,8 @@ app.get("/proxy", async (req, res) => {
       $("body").prepend(`<div id="__pb__">
         <a id="__pl__" href="/">⌂ PEDUS</a>
         <input id="__pi__" type="text" value="${safeUrl}" placeholder="Enter URL…"
-               onkeydown="if(event.key==='Enter')location.href='/proxy?url='+encodeURIComponent(this.value)"/>
-        <button id="__pbtn__" onclick="location.href='/proxy?url='+encodeURIComponent(document.getElementById('__pi__').value)">GO →</button>
+               onkeydown="if(event.key==='Enter'){var v=this.value.trim();var isUrl=(/^https?:\/\//i.test(v)||(!v.includes(' ')&&v.includes('.')));location.href=isUrl?'/proxy?url='+encodeURIComponent(/^https?:\/\//i.test(v)?v:'https://'+v):'/search?q='+encodeURIComponent(v)}"/>
+        <button id="__pbtn__" onclick="var v=document.getElementById('__pi__').value.trim();var isUrl=(/^https?:\/\//i.test(v)||(!v.includes(' ')&&v.includes('.')));location.href=isUrl?'/proxy?url='+encodeURIComponent(/^https?:\/\//i.test(v)?v:'https://'+v):'/search?q='+encodeURIComponent(v)" >GO →</button>
       </div>`);
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -384,6 +384,14 @@ app.get("/proxy", async (req, res) => {
         <br><a href="/">← Back to Pedus</a>
       </div></body></html>`);
   }
+});
+
+// ─────────────────────────────────────────────────────────────
+// Search route: /search?q=query  →  proxy Google search
+// ─────────────────────────────────────────────────────────────
+app.get("/search", (req, res) => {
+  // Always serve the search page — the JS handles the actual query
+  res.sendFile(path.join(__dirname, "public", "search.html"));
 });
 
 // ─────────────────────────────────────────────────────────────
